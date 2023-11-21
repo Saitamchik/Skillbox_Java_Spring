@@ -17,7 +17,7 @@ public class ContactsAppDefault implements ContactsApp {
     private final String REGEX_PHONE = "[+8]+[0-9]{8}+";
     private final String REGEX_EMAIL = "^[A-Za-z0-9+_.-]+@(.+)$";
 
-    private ArrayList<Contacts> contacts = new ArrayList<>();
+    private static ArrayList<Contacts> contacts = new ArrayList<>();
 
     private void printContacts() {
         if (contacts.isEmpty()) {

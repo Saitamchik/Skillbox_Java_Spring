@@ -1,6 +1,8 @@
 package org.example.bootstarter;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.shell.standard.ShellComponent;
@@ -12,7 +14,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 @ShellComponent
+@RequiredArgsConstructor
 public class StudentServiceImpl implements StudentService{
+
+    EventWorker eventWorker = new EventWorker();
 
     @Value("${init.file.url}")
     private String inputFileUrl;
@@ -20,8 +25,8 @@ public class StudentServiceImpl implements StudentService{
     @Value("${event.init.switch}")
     private boolean eventInit;
 
-    private EventQueue eventQueue = new EventQueue();
-    private EventQueueWorker eventQueueWorker = new EventQueueWorker(eventQueue);
+    private final ApplicationEventPublisher eventPublisher;
+
     private static ArrayList<Student> students = new ArrayList<>();
     private int nextId = 1;
 
@@ -38,7 +43,7 @@ public class StudentServiceImpl implements StudentService{
         Student student = new Student(nextId++, firstName, lastName, age);
         students.add(student);
 
-        eventQueueWorker.startEventQueue(" Create " + student.toString());
+        eventPublisher.publishEvent(new StudentAddedEvent(this, student));
     }
 
     @ShellMethod(key = "remove")
@@ -47,14 +52,15 @@ public class StudentServiceImpl implements StudentService{
         if (students.size() != 0) {
             for (int i = 0; i < students.size(); i++) {
                 if (students.get(i).getId() == id) {
+                    eventPublisher.publishEvent(new StudentRemoveEvent(this, students.get(i).getId()));
                     students.remove(i);
-                    eventQueueWorker.startEventQueue(" Remove student id = " + id);
-                } else {
-                    eventQueueWorker.startEventQueue(" Student not found");
+                    break;
+                } else if ((i + 1) == students.size()) {
+                    System.out.println(" Student not found");
                 }
             }
         } else {
-            eventQueueWorker.startEventQueue(" Students list is null");
+            System.out.println(" Students list is null");
         }
     }
 
@@ -88,7 +94,7 @@ public class StudentServiceImpl implements StudentService{
                 Student student = new Student(nextId++, firstName, lastName, age);
                 students.add(student);
                 if (eventInit) {
-                    eventQueueWorker.startEventQueue(" Create " + student.toString());
+                    eventWorker.studentAddedEventPrint(new StudentAddedEvent(this, student));
                 }
                 studentData = readerLine.readLine().split(";");
             }
